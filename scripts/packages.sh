@@ -35,7 +35,7 @@ rm -rf ./feeds/packages/net/chinadns-ng
 # #openclash
 # git clone -b master --depth 1 https://github.com/vernesong/OpenClash.git
 # nikki
-git clone -b master --depth 1 https://github.com/nikkinikki-org/OpenWrt-nikki.git
+# git clone -b master --depth 1 https://github.com/nikkinikki-org/OpenWrt-nikki.git
 
 popd
 
