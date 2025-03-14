@@ -8,7 +8,7 @@
 # Description: Build OpenWrt using GitHub Actions
 #
 
-name: 23.05-X86-64
+name: 23.05_X86-64
 
 permissions: write-all
 #开启写权限，防止无法上传到release
@@ -72,7 +72,7 @@ jobs:
       uses: klever1988/cachewrtbuild@main
       with:
         ccache: 'true'
-        mixkey: '23.05-X86'
+        mixkey: '23.05_X86-64'
         prefix: ${{ github.workspace }}/openwrt
 
     - name: 更新 & 安装 feeds & 执行脚本
@@ -139,8 +139,8 @@ jobs:
       id: tag
       if: env.UPLOAD_RELEASE == 'true' && steps.compile.outputs.status == 'success' && !cancelled()
       run: |
-        echo -e "✅ 23.05 源码 X86 平台\n" >> release.txt
-        echo "release_tag=$(date +"%Y.%m.%d-23.05_x86")" >> $GITHUB_OUTPUT
+        echo -e "✅ 23.05 源码 X86-64 平台\n" >> release.txt
+        echo "release_tag=$(date +"%Y.%m.%d-23.05_x86-64")" >> $GITHUB_OUTPUT
         echo "status=success" >> $GITHUB_OUTPUT
 
     - name: 上传固件到发布
