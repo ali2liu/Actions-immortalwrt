@@ -68,12 +68,12 @@ jobs:
         git clone $REPO_URL -b $REPO_BRANCH openwrt
         ln -sf /workdir/openwrt $GITHUB_WORKSPACE/openwrt
 
-   # - name: 开启缓存
-   #   uses: klever1988/cachewrtbuild@main
-   #   with:
-   #     ccache: 'true'
-   #     mixkey: '23.05-X86'
-   #     prefix: ${{ github.workspace }}/openwrt
+    # - name: 开启缓存
+    #   uses: klever1988/cachewrtbuild@main
+    #   with:
+    #     ccache: 'true'
+    #     mixkey: '23.05-X86'
+    #     prefix: ${{ github.workspace }}/openwrt
 
     - name: 更新 & 安装 feeds & 执行脚本
       run: |
@@ -100,8 +100,8 @@ jobs:
       run: |
         cd openwrt
         make defconfig
-     #   echo -e "$(($(nproc)+1)) thread compile"
-     #   make -j$(($(nproc)+1)) || make -j$(nproc) || make -j1 V=s
+        # echo -e "$(($(nproc)+1)) thread compile"
+        # make -j$(($(nproc)+1)) || make -j$(nproc) || make -j1 V=s
         make -j1 V=s
         echo "status=success" >> $GITHUB_OUTPUT
 
