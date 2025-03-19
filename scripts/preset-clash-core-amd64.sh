@@ -39,8 +39,8 @@ CLASH_META_URL=$(curl -sL https://api.github.com/repos/MetaCubeX/Clash.Meta/rele
 
 
 # 给内核解压
-wget -qO- $CLASH_DEV_URL | tar xOvz > files/etc/openclash/core/clash
-wget -qO- $CLASH_TUN_URL | gunzip -c > files/etc/openclash/core/clash_tun
+# wget -qO- $CLASH_DEV_URL | tar xOvz > files/etc/openclash/core/clash
+# wget -qO- $CLASH_TUN_URL | gunzip -c > files/etc/openclash/core/clash_tun
 # wget -qO- $CLASH_META_URL | tar xOvz > files/etc/openclash/core/clash_meta
 
 # wget -qO- $CLASH_DEV_URL | gunzip -c > files/etc/openclash/core/clash
