@@ -20,7 +20,7 @@
 #adguardhome
 # git clone -b 2023.10 --depth 1 https://github.com/XiaoBinin/luci-app-adguardhome.git
 #lucky
-# git clone -b main --depth 1 https://github.com/sirpdboy/luci-app-lucky.git
+git clone -b main --depth 1 https://github.com/sirpdboy/luci-app-lucky.git
 # #smartdns
 # git clone -b lede --depth 1 https://github.com/pymumu/luci-app-smartdns.git
 # git clone -b master --depth 1 https://github.com/pymumu/smartdns.git
