@@ -13,8 +13,8 @@
 
 
 #克隆的源码放在small文件夹
-# mkdir package/small
-pushd package
+mkdir package/small
+pushd package/small
 
 
 #adguardhome
