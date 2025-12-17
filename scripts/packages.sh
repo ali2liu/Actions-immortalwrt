@@ -2,7 +2,7 @@
 
 #删除feeds中的插件
 # rm -rf ./feeds/packages/net/v2ray-geodata
-rm -rf ./feeds/packages/lang/golang
+# rm -rf ./feeds/packages/lang/golang
 rm -rf ./feeds/packages/net/{geoview,shadowsocks-libev,chinadns-ng,mosdns}
 rm -rf ./feeds/luci/applications/luci-app-mosdns
 
