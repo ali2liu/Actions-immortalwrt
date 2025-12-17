@@ -26,6 +26,7 @@ env:
   REPO_URL: https://github.com/immortalwrt/immortalwrt
   REPO_BRANCH: openwrt-25.12
   # 修改 REPO_BRANCH 来达到更改编译版本
+  ADD_FEED_SH: scripts/add_custom_feed.sh
   CONFIG_FILE: configs/Packages-x86.txt
   SETTINGS_SH: scripts/init-settings.sh
   PACKAGES_SH: scripts/packages.sh
