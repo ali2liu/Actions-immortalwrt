@@ -82,6 +82,7 @@ jobs:
     - name: 安装 feeds
       run: |
         cd openwrt
+        chmod +x $GITHUB_WORKSPACE/$ADD_FEED_SH && $GITHUB_WORKSPACE/$ADD_FEED_SH
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
