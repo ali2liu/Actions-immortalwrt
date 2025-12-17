@@ -20,7 +20,7 @@ pushd package/small
 #adguardhome
 # git clone -b 2024.09.05 --depth 1 https://github.com/XiaoBinin/luci-app-adguardhome.git
 #lucky
-# git clone -b main --depth 1 https://github.com/gdy666/luci-app-lucky.git
+git clone -b main --depth 1 https://github.com/gdy666/luci-app-lucky.git
 # #smartdns
 # git clone -b lede --depth 1 https://github.com/pymumu/luci-app-smartdns.git
 # git clone -b master --depth 1 https://github.com/pymumu/smartdns.git
