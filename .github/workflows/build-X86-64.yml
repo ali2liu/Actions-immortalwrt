@@ -86,66 +86,29 @@ jobs:
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-    - name: 修复 luci-app-openvpn-server config 冲突 (重命名 openvpn -> openvpn-server)
-      run: |
-        cd openwrt
-        # 1. 重命名/替换 config 文件路径 (root/etc/config/openvpn -> openvpn-server)
-        LUCI_APP_DIR="feeds/luci/applications/luci-app-openvpn-server"
-        if [ -f "$LUCI_APP_DIR/root/etc/config/openvpn" ]; then
-          mv "$LUCI_APP_DIR/root/etc/config/openvpn" "$LUCI_APP_DIR/root/etc/config/openvpn-server"
-        fi
-    
-        # 2. 复制并修改 init 脚本 (从 openvpn 包复制，假设 feeds/packages/net/openvpn/root/etc/init.d/openvpn 存在；否则从 luci-app 复制/创建)
-        OPENVPN_INIT_DIR="feeds/packages/net/openvpn/root/etc/init.d"
-        if [ -f "$OPENVPN_INIT_DIR/openvpn" ]; then
-        cp "$OPENVPN_INIT_DIR/openvpn" "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"
-        else
-          # 如果无，创建简单 procd init (基于标准 OpenWrt openvpn init)
-          mkdir -p "$LUCI_APP_DIR/root/etc/init.d"
-          cat > "$LUCI_APP_DIR/root/etc/init.d/openvpn-server" << 'EOF'
-          #!/bin/sh /etc/rc.common
-          START=99
-          STOP=10
-          USE_PROCD=1
-          PROG=/usr/sbin/openvpn
+- name: 修复 luci-app-openvpn-server config 冲突（批量安全替换）
+  run: |
+    APP_DIR=$(find openwrt/feeds/luci -type d -name luci-app-openvpn-server | head -1)
+    if [ -z "$APP_DIR" ]; then
+      echo "未找到 luci-app-openvpn-server，跳过修改"
+      exit 0
+    fi
+    cd "$APP_DIR"
 
-          validate_openvpn-server_section() {
-            uci_validate_section openvpn-server "${1}" \
-              'enabled:bool:0' 'config:string' 'verb:list(0)'  # 添加更多选项
-          }
+    # 批量替换代码中所有 "openvpn" 为 "openvpn-server"（但避免误伤包名）
+    find . -type f -name "*.lua" -exec sed -i 's/"openvpn"/"openvpn-server"/g' {} +
+    find . -type f -name "*.htm*" -o -name "*.js" -exec sed -i 's/"openvpn"/"openvpn-server"/g' {} +
 
-          start_service() {
-            config_load openvpn-server  # 改成 openvpn-server
-            config_foreach start_openvpn-server openvpn-server
-          }
+    # Makefile 中的 config 文件路径
+    sed -i 's|/etc/config/openvpn|/etc/config/openvpn-server|g' Makefile
 
-          start_openvpn-server() {
-            # 你的 openvpn 启动逻辑，生成 .conf 并 procd_open_instance
-            # 示例：生成 /etc/openvpn/server.conf 并 openvpn --config /etc/openvpn/server.conf
-          }
-          EOF
-          chmod +x "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"
-        fi
-    
-        # 3. sed 批量替换 Makefile 中的 install/CONFFILES (避免安装冲突)
-        sed -i 's|/etc/config/openvpn|/etc/config/openvpn-server|g' "$LUCI_APP_DIR/Makefile"
-        sed -i 's|openvpn-server:/etc/config/openvpn|openvpn-server:/etc/config/openvpn-server|g' "$LUCI_APP_DIR/Makefile"  # 如果有 CONFFILES
-    
-        # 4. sed 替换 LuCI 代码中所有 UCI openvpn -> openvpn-server
-        find "$LUCI_APP_DIR" -name "*.lua" -o -name "*.htm" | xargs sed -i 's/config_load *( *["'\'']openvpn["'\''] *)/config_load("openvpn-server")/g'
-        find "$LUCI_APP_DIR" -name "*.lua" -o -name "*.htm" | xargs sed -i 's/["'\'']openvpn["'\''] *[,)]/["openvpn-server"]/g'  # uci:get_all, foreach 等
-        find "$LUCI_APP_DIR" -name "*.lua" -o -name "*.htm" | xargs sed -i 's|openvpn(/|openvpn-server(/g'  # 自定义 model 函数
-    
-        # 5. 替换 init 脚本中的 UCI
-        sed -i 's/config_load *openvpn/config_load openvpn-server/g' "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"
-        sed -i 's/UCI_CONFIG=openvpn/UCI_CONFIG=openvpn-server/g' "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"  # 如果有
-    
-        # 6. 更新 feeds (让修改生效)
-        ./scripts/feeds update -a
-        ./scripts/feeds install -a luci-app-openvpn-server
-    
-        echo "修复完成: luci-app-openvpn-server 现在使用 /etc/config/openvpn-server"
-        shell: bash
+    # 如果有默认 config 文件，重命名并调整内容
+    if [ -f root/etc/config/openvpn ]; then
+      mv root/etc/config/openvpn root/etc/config/openvpn-server
+      sed -i 's/config openvpn/config openvpn-server/g' root/etc/config/openvpn-server
+    fi
+
+    echo "luci-app-openvpn-server 修改完成，使用新 config: openvpn-server"
         
     - name: 导入补丁和配置 & 执行脚本
       run: |
