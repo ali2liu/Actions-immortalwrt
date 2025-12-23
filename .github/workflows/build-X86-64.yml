@@ -86,66 +86,67 @@ jobs:
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-- name: 修复 luci-app-openvpn-server config 冲突 (重命名 openvpn -> openvpn-server)
-  run: |
-    cd openwrt
-    # 1. 重命名/替换 config 文件路径 (root/etc/config/openvpn -> openvpn-server)
-    LUCI_APP_DIR="feeds/luci/applications/luci-app-openvpn-server"
-    if [ -f "$LUCI_APP_DIR/root/etc/config/openvpn" ]; then
-      mv "$LUCI_APP_DIR/root/etc/config/openvpn" "$LUCI_APP_DIR/root/etc/config/openvpn-server"
-    fi
+    - name: 修复 luci-app-openvpn-server config 冲突 (重命名 openvpn -> openvpn-server)
+      run: |
+        cd openwrt
+        # 1. 重命名/替换 config 文件路径 (root/etc/config/openvpn -> openvpn-server)
+        LUCI_APP_DIR="feeds/luci/applications/luci-app-openvpn-server"
+        if [ -f "$LUCI_APP_DIR/root/etc/config/openvpn" ]; then
+          mv "$LUCI_APP_DIR/root/etc/config/openvpn" "$LUCI_APP_DIR/root/etc/config/openvpn-server"
+        fi
     
-    # 2. 复制并修改 init 脚本 (从 openvpn 包复制，假设 feeds/packages/net/openvpn/root/etc/init.d/openvpn 存在；否则从 luci-app 复制/创建)
-    OPENVPN_INIT_DIR="feeds/packages/net/openvpn/root/etc/init.d"
-    if [ -f "$OPENVPN_INIT_DIR/openvpn" ]; then
-      cp "$OPENVPN_INIT_DIR/openvpn" "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"
-    else
-      # 如果无，创建简单 procd init (基于标准 OpenWrt openvpn init)
-      mkdir -p "$LUCI_APP_DIR/root/etc/init.d"
-      cat > "$LUCI_APP_DIR/root/etc/init.d/openvpn-server" << 'EOF'
-      #!/bin/sh /etc/rc.common
-      START=99
-      STOP=10
-      USE_PROCD=1
-      PROG=/usr/sbin/openvpn
+        # 2. 复制并修改 init 脚本 (从 openvpn 包复制，假设 feeds/packages/net/openvpn/root/etc/init.d/openvpn 存在；否则从 luci-app 复制/创建)
+        OPENVPN_INIT_DIR="feeds/packages/net/openvpn/root/etc/init.d"
+        if [ -f "$OPENVPN_INIT_DIR/openvpn" ]; then
+        cp "$OPENVPN_INIT_DIR/openvpn" "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"
+        else
+          # 如果无，创建简单 procd init (基于标准 OpenWrt openvpn init)
+          mkdir -p "$LUCI_APP_DIR/root/etc/init.d"
+          cat > "$LUCI_APP_DIR/root/etc/init.d/openvpn-server" << 'EOF'
+          #!/bin/sh /etc/rc.common
+          START=99
+          STOP=10
+          USE_PROCD=1
+          PROG=/usr/sbin/openvpn
 
-      validate_openvpn-server_section() {
-        uci_validate_section openvpn-server "${1}" \
-          'enabled:bool:0' 'config:string' 'verb:list(0)'  # 添加更多选项
-      }
+          validate_openvpn-server_section() {
+            uci_validate_section openvpn-server "${1}" \
+              'enabled:bool:0' 'config:string' 'verb:list(0)'  # 添加更多选项
+          }
 
-      start_service() {
-        config_load openvpn-server  # 改成 openvpn-server
-        config_foreach start_openvpn-server openvpn-server
-      }
+          start_service() {
+            config_load openvpn-server  # 改成 openvpn-server
+            config_foreach start_openvpn-server openvpn-server
+          }
 
-      start_openvpn-server() {
-        # 你的 openvpn 启动逻辑，生成 .conf 并 procd_open_instance
-        # 示例：生成 /etc/openvpn/server.conf 并 openvpn --config /etc/openvpn/server.conf
-      }
-      EOF
-      chmod +x "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"
-    fi
+          start_openvpn-server() {
+            # 你的 openvpn 启动逻辑，生成 .conf 并 procd_open_instance
+            # 示例：生成 /etc/openvpn/server.conf 并 openvpn --config /etc/openvpn/server.conf
+          }
+          EOF
+          chmod +x "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"
+        fi
     
-    # 3. sed 批量替换 Makefile 中的 install/CONFFILES (避免安装冲突)
-    sed -i 's|/etc/config/openvpn|/etc/config/openvpn-server|g' "$LUCI_APP_DIR/Makefile"
-    sed -i 's|openvpn-server:/etc/config/openvpn|openvpn-server:/etc/config/openvpn-server|g' "$LUCI_APP_DIR/Makefile"  # 如果有 CONFFILES
+        # 3. sed 批量替换 Makefile 中的 install/CONFFILES (避免安装冲突)
+        sed -i 's|/etc/config/openvpn|/etc/config/openvpn-server|g' "$LUCI_APP_DIR/Makefile"
+        sed -i 's|openvpn-server:/etc/config/openvpn|openvpn-server:/etc/config/openvpn-server|g' "$LUCI_APP_DIR/Makefile"  # 如果有 CONFFILES
     
-    # 4. sed 替换 LuCI 代码中所有 UCI openvpn -> openvpn-server
-    find "$LUCI_APP_DIR" -name "*.lua" -o -name "*.htm" | xargs sed -i 's/config_load *( *["'\'']openvpn["'\''] *)/config_load("openvpn-server")/g'
-    find "$LUCI_APP_DIR" -name "*.lua" -o -name "*.htm" | xargs sed -i 's/["'\'']openvpn["'\''] *[,)]/["openvpn-server"]/g'  # uci:get_all, foreach 等
-    find "$LUCI_APP_DIR" -name "*.lua" -o -name "*.htm" | xargs sed -i 's|openvpn(/|openvpn-server(/g'  # 自定义 model 函数
+        # 4. sed 替换 LuCI 代码中所有 UCI openvpn -> openvpn-server
+        find "$LUCI_APP_DIR" -name "*.lua" -o -name "*.htm" | xargs sed -i 's/config_load *( *["'\'']openvpn["'\''] *)/config_load("openvpn-server")/g'
+        find "$LUCI_APP_DIR" -name "*.lua" -o -name "*.htm" | xargs sed -i 's/["'\'']openvpn["'\''] *[,)]/["openvpn-server"]/g'  # uci:get_all, foreach 等
+        find "$LUCI_APP_DIR" -name "*.lua" -o -name "*.htm" | xargs sed -i 's|openvpn(/|openvpn-server(/g'  # 自定义 model 函数
     
-    # 5. 替换 init 脚本中的 UCI
-    sed -i 's/config_load *openvpn/config_load openvpn-server/g' "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"
-    sed -i 's/UCI_CONFIG=openvpn/UCI_CONFIG=openvpn-server/g' "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"  # 如果有
+        # 5. 替换 init 脚本中的 UCI
+        sed -i 's/config_load *openvpn/config_load openvpn-server/g' "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"
+        sed -i 's/UCI_CONFIG=openvpn/UCI_CONFIG=openvpn-server/g' "$LUCI_APP_DIR/root/etc/init.d/openvpn-server"  # 如果有
     
-    # 6. 更新 feeds (让修改生效)
-    ./scripts/feeds update -a
-    ./scripts/feeds install -a luci-app-openvpn-server
+        # 6. 更新 feeds (让修改生效)
+        ./scripts/feeds update -a
+        ./scripts/feeds install -a luci-app-openvpn-server
     
-    echo "修复完成: luci-app-openvpn-server 现在使用 /etc/config/openvpn-server"
-    
+        echo "修复完成: luci-app-openvpn-server 现在使用 /etc/config/openvpn-server"
+        shell: bash
+        
     - name: 导入补丁和配置 & 执行脚本
       run: |
         [ -d files ] && mv files openwrt/files || echo "files not found"
