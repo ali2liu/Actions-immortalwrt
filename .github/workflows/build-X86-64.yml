@@ -86,30 +86,6 @@ jobs:
         ./scripts/feeds update -a
         ./scripts/feeds install -a
 
-    - name: 修复 luci-app-openvpn-server config 冲突（批量安全替换）
-      run: |
-        APP_DIR=$(find openwrt/feeds/luci -type d -name luci-app-openvpn-server | head -1)
-        if [ -z "$APP_DIR" ]; then
-          echo "未找到 luci-app-openvpn-server，跳过修改"
-          exit 0
-        fi
-        cd "$APP_DIR"
-
-        # 批量替换代码中所有 "openvpn" 为 "openvpn-server"（但避免误伤包名）
-        find . -type f -name "*.lua" -exec sed -i 's/"openvpn"/"openvpn-server"/g' {} +
-        find . -type f -name "*.htm*" -o -name "*.js" -exec sed -i 's/"openvpn"/"openvpn-server"/g' {} +
-
-        # Makefile 中的 config 文件路径
-        sed -i 's|/etc/config/openvpn|/etc/config/openvpn-server|g' Makefile
-
-        # 如果有默认 config 文件，重命名并调整内容
-        if [ -f root/etc/config/openvpn ]; then
-          mv root/etc/config/openvpn root/etc/config/openvpn-server
-          sed -i 's/config openvpn/config openvpn-server/g' root/etc/config/openvpn-server
-        fi
-
-        echo "luci-app-openvpn-server 修改完成，使用新 config: openvpn-server"
-        
     - name: 导入补丁和配置 & 执行脚本
       run: |
         [ -d files ] && mv files openwrt/files || echo "files not found"
