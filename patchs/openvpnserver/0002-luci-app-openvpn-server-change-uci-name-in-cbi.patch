@@ -1,0 +1,15 @@
+diff --git a/luasrc/model/cbi/openvpn-server.lua b/luasrc/model/cbi/openvpn-server.lua
+--- a/luasrc/model/cbi/openvpn-server.lua
++++ b/luasrc/model/cbi/openvpn-server.lua
+@@ -1,4 +1,4 @@
+-m = Map("openvpn", translate("OpenVPN"), translate("OpenVPN server configuration"))
++m = Map("openvpn-server", translate("OpenVPN"), translate("OpenVPN server configuration"))
+ 
+ -- 下面如果有其他 "openvpn" 字符串，如 section type 或 option，也替换
+ -- 例如：
+@@ -10,7 +10,7 @@ s = m:section(TypedSection, "openvpn", translate("OpenVPN instances"))
+ s:tab("basic", translate("Basic Settings"))
+ -- ... 其他代码不变，但如果有 config:get("openvpn", ...) 改成 "openvpn-server"
+ 
+-s.anonymous = true
++s.anonymous = true  -- 示例，如果有更多行，搜 "openvpn" 替换成 "openvpn-server"
