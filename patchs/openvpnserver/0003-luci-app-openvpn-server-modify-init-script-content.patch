@@ -1,0 +1,16 @@
+diff --git a/files/openvpn-server.init b/files/openvpn-server.init
+--- a/files/openvpn-server.init
++++ b/files/openvpn-server.init
+@@ -30,7 +30,7 @@ append_param() {
+ }
+ 
+ append_bools() {
+-	local p; local v; local s="$1"; shift
++	local p; local v; local s="$1"; shift   # 示例，实际替换下面关键行
+ }
+ 
+ # 全局替换示例：
+-# 所有 config_load openvpn 改 config_load openvpn-server
++# 所有 /var/etc/openvpn- 改 /var/etc/openvpn-server-
++# 所有 openvpn($name) 改 openvpn-server($name)
++# 所有 /var/run/openvpn. 改 /var/run/openvpn-server.
