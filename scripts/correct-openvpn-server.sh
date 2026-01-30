@@ -1,44 +1,51 @@
-# 解决 luci-app-openvpn-server 覆盖 /etc/config/openvpn 的编译错误
-# 方式：移除 openvpn-openssl 对 /etc/config/openvpn 的 conffiles 拥有权
-pushd feeds/packages/net/openvpn
+# ==================== 修复 luci-app-openvpn-server 与 openvpn-openssl 的 /etc/config/openvpn 冲突 ====================
 
-# 备份原 Makefile（可选，但安全）
-cp Makefile Makefile.bak
+echo "=== Fixing luci-app-openvpn-server conflict with openvpn-openssl ==="
 
-# 移除 conffiles 里的 /etc/config/openvpn （通常在 openvpn-openssl 定义里）
-# 用 sed 删除整行或注释掉
-sed -i '/conffiles/,/)/ s|/etc/config/openvpn||g' Makefile
+pushd feeds/luci/applications/luci-app-openvpn-server || { echo "Directory not found, skipping"; popd; }
 
-# 或者更精确：如果 conffiles 是这样写的
-# sed -i '/conffiles/{n;/\/etc\/config\/openvpn/d;}' Makefile   # 删除包含该路径的下一行
+# 1. 如果有 root/ 或 files/ 里的 /etc/config/openvpn，直接删掉或重命名（最直接解决覆盖）
+if [ -f ./root/etc/config/openvpn ] || [ -d ./root/etc/config ]; then
+  rm -f ./root/etc/config/openvpn 2>/dev/null
+  echo "Removed root/etc/config/openvpn"
+fi
 
-# 如果上面不准，用这个粗暴但有效的：完全删除 conffiles 部分（openvpn-openssl 不需要它拥有 config，因为 luci 会处理）
-sed -i '/define Package\/openvpn-openssl\/conffiles/,/endef/d' Makefile
+if [ -f ./files/openvpn.config ] || [ -f ./files/openvpn ]; then
+  rm -f ./files/openvpn* 2>/dev/null
+  echo "Removed files/openvpn*"
+fi
 
-# 或者注释掉
-# sed -i 's/^define Package\/openvpn-openssl\/conffiles/#&/' Makefile
-# sed -i 's/^\/etc\/config\/openvpn/#&/' Makefile
-# sed -i 's/^endef/#&/' Makefile
+# 2. 强制 Makefile 不安装任何 config（如果有 INSTALL_CONF 相关行）
+sed -i '/INSTALL_CONF.*openvpn/d' Makefile 2>/dev/null || true
+sed -i '/etc\/config\/openvpn/d' Makefile 2>/dev/null || true
 
-popd
+# 3. 改 UCI config 名为 openvpn-server（让 LuCI 读正确的文件）
+# 查找所有 .lua 文件，替换 Map("openvpn" → Map("openvpn-server"
+find . -type f -name "*.lua" -exec sed -i 's/Map("openvpn"/Map("openvpn-server"/g' {} + 2>/dev/null || true
+find . -type f -name "*.lua" -exec sed -i 's/"openvpn"/"openvpn-server"/g' {} + 2>/dev/null || true
 
-# 同时保留你之前的修改 luci-app-openvpn-server 的部分（rename config 名）
-pushd feeds/luci/applications/luci-app-openvpn-server
-
-# 你的原有 sed 命令（确保 LuCI 读 openvpn-server）
-find luasrc/ -type f -name "*.lua" -exec sed -i 's/Map("openvpn"/Map("openvpn-server"/g' {} \; || true
-find luasrc/ -type f -name "*.lua" -exec sed -i 's/"openvpn"/"openvpn-server"/g' {} \; || true
-
-# 因为上游没 files/，我们手动创建 openvpn-server.init 并安装（可选，但推荐，让服务独立）
-mkdir -p files
-# 从 packages 复制 openvpn init 并改名
-cp ../../packages/net/openvpn/files/openvpn.init files/openvpn-server.init 2>/dev/null || echo "No original init, skipping"
+# 4. 添加独立的 init 脚本（上游 luci-app 没自带，但我们可以从 packages 借用并改名）
+mkdir -p files 2>/dev/null
+cp ../../packages/net/openvpn/files/openvpn.init files/openvpn-server.init 2>/dev/null || echo "No original openvpn.init found"
 
 if [ -f files/openvpn-server.init ]; then
   sed -i 's/config_load openvpn/config_load openvpn-server/g' files/openvpn-server.init
   sed -i 's/"openvpn"/"openvpn-server"/g' files/openvpn-server.init
-  sed -i 's/openvpn-/openvpn-server-/g' files/openvpn-server.init   # pid, conf 等路径
+  sed -i 's/openvpn-/openvpn-server-/g' files/openvpn-server.init   # pid/conf/log 路径避免冲突
   sed -i 's/ openvpn / openvpn-server /g' files/openvpn-server.init
+  echo "Created and modified openvpn-server.init"
 fi
 
+# 5. 如果 Makefile 有 install init 为 openvpn，改成 openvpn-server
+sed -i 's/openvpn.init/openvpn-server.init/g' Makefile 2>/dev/null || true
+sed -i 's|/etc/init.d/openvpn|/etc/init.d/openvpn-server|g' Makefile 2>/dev/null || true
+
 popd
+
+# 可选：如果上面还不行，移除 openvpn-openssl 的 conffiles 拥有权（备用方案）
+pushd feeds/packages/net/openvpn || { echo "openvpn Makefile not found"; popd; }
+sed -i '/conffiles/,/endef/ s|/etc/config/openvpn||g' Makefile 2>/dev/null || true
+sed -i '/\/etc\/config\/openvpn/d' Makefile 2>/dev/null || true
+popd
+
+echo "=== OpenVPN conflict fix applied ==="
