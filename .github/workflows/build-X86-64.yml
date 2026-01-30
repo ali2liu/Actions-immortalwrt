@@ -31,7 +31,7 @@ env:
   SETTINGS_SH: scripts/init-settings.sh
   PACKAGES_SH: scripts/packages.sh
   CLASH_CORE_SH: scripts/preset-clash-core-amd64.sh
-  CORRECT_OPENVPN_SERVER_SH: /scripts/correct-openvpn-server.sh
+  CORRECT_OPENVPN_SERVER_SH: scripts/correct-openvpn-server.sh
   UPLOAD_BIN_DIR: false
   UPLOAD_FIRMWARE: false
   UPLOAD_RELEASE: true
