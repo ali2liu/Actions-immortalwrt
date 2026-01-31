@@ -49,3 +49,48 @@ sed -i '/\/etc\/config\/openvpn/d' Makefile 2>/dev/null || true
 popd
 
 echo "=== OpenVPN conflict fix applied ==="
+
+# ==================== 修复 openvpn-openssl 编译错误：files/openvpn.config 不存在 ====================
+
+echo "=== Fixing openvpn-openssl Makefile: missing files/openvpn.config ==="
+
+pushd feeds/packages/net/openvpn || { echo "openvpn dir not found!"; exit 1; }
+
+# 备份 Makefile
+cp Makefile Makefile.bak
+
+# 方法1：注释掉或删除安装 openvpn.config 的那行（最简单有效）
+sed -i '/install.*openvpn.config/d' Makefile
+sed -i '/files\/openvpn.config/d' Makefile
+
+# 方法2：如果上面不准，用更精确的（假设行号或模式匹配）
+# sed -i 's/install -m0600 files\/openvpn.config.*$/:# commented out missing config/' Makefile
+
+# 方法3：如果 Makefile 有 conffiles 包含 /etc/config/openvpn，也可顺手注释（防后续冲突）
+sed -i '/conffiles/,/endef/ s/^/#/' Makefile 2>/dev/null || true
+
+# 额外：确保不安装任何默认 config（上游可能有遗留）
+rm -f files/openvpn.config 2>/dev/null || true
+
+popd
+
+echo "=== openvpn-openssl fix applied, should compile now ==="
+
+# 如果你还想继续处理 luci-app-openvpn-server 的 UCI rename（可选，但推荐）
+pushd feeds/luci/applications/luci-app-openvpn-server || { echo "luci-app-openvpn-server not found"; popd; }
+
+# 重命名 UCI config 为 openvpn-server（让 LuCI 读独立文件）
+find . -type f \( -name "*.lua" -o -name "*.js" \) -exec sed -i 's/Map("openvpn"/Map("openvpn-server"/g' {} + 2>/dev/null || true
+find . -type f \( -name "*.lua" -o -name "*.js" \) -exec sed -i 's/"openvpn"/"openvpn-server"/g' {} + 2>/dev/null || true
+
+# 如果上游有 init，改成 openvpn-server（但通常没有，自行创建）
+mkdir -p files 2>/dev/null
+if [ -f ../../packages/net/openvpn/files/openvpn.init ]; then
+  cp ../../packages/net/openvpn/files/openvpn.init files/openvpn-server.init
+  sed -i 's/config_load openvpn/config_load openvpn-server/g' files/openvpn-server.init
+  sed -i 's/openvpn-/openvpn-server-/g' files/openvpn-server.init
+  # Makefile 里如果有安装 openvpn.init，改路径（但 ImmortalWrt luci-app 通常没这个）
+  sed -i 's/openvpn.init/openvpn-server.init/g' Makefile 2>/dev/null || true
+fi
+
+popd
